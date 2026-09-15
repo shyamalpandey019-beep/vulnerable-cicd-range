@@ -1,0 +1,49 @@
+name: Hardened CI/CD Pipeline (Defense Reference)
+
+# Hardening Fixes:
+# 1. Use standard 'pull_request' instead of 'pull_request_target'.
+#    Runs in untrusted fork context with ZERO access to repository secrets.
+# 2. Restrict GITHUB_TOKEN permissions to read-only (Least Privilege).
+# 3. Checkout PR code safely without exposing base repository secrets.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+# Explicit least-privilege permissions: read-only access to repository contents
+permissions:
+  contents: read
+
+jobs:
+  secure-test-runner:
+    name: Hardened PR Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Display Secure Context
+        run: |
+          echo "============================================================"
+          echo "Trigger Event: ${{ github.event_name }} (Safe untrusted context)"
+          echo "PR Number:     #${{ github.event.pull_request.number }}"
+          echo "Sender / Actor: ${{ github.actor }}"
+          echo "============================================================"
+
+      # Safe checkout of PR code under unprivileged token
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Verify Secrets Are Inaccessible
+        env:
+          ATTEMPTED_SECRET: ${{ secrets.DUMMY_SECRET }}
+        run: |
+          echo "[*] Checking secret accessibility in untrusted pull_request run..."
+          if [ -z "$ATTEMPTED_SECRET" ]; then
+            echo "[+] SUCCESS (SECURE): Repository secrets are empty and protected from fork PR."
+          else
+            echo "[!] WARNING: Secret leaked into environment."
+          fi
+
+      - name: Run Build in Sandboxed Environment
+        run: |
+          chmod +x ./scripts/build.sh
+          ./scripts/build.sh

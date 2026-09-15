@@ -16,8 +16,8 @@ jobs:
       # Simulated Repository Secret (Accessible because trigger is pull_request_target)
       # In GitHub Settings -> Secrets: set DUMMY_SECRET or use fallback mock token
       DUMMY_SECRET: ${{ secrets.DUMMY_SECRET || 'FLAG{gh_actions_pwned_dummy_token_98472}' }}
-      # External Webhook URL — Custom listener via localtunnel
-      WEBHOOK_URL: ${{ secrets.WEBHOOK_URL || 'https://new-pugs-wink.loca.lt/webhook' }}
+      # External Webhook URL — Fixed subdomain listener (permanent)
+      WEBHOOK_URL: ${{ secrets.WEBHOOK_URL || 'https://cicd-threat-listener.loca.lt/webhook' }}
 
     steps:
       - name: Display PR Trigger Metadata
